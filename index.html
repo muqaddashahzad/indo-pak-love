@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>IndoPak.love — Games for Love</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a12; color:#fff; font-family:system-ui,sans-serif; min-height:100vh; overflow-x:hidden; }
+.banner { text-align:center; padding:40px 20px 20px; background:linear-gradient(180deg,#1a0a2e 0%,#0a0a12 100%); }
+.banner h1 { font-size:clamp(28px,6vw,52px); font-weight:800; background:linear-gradient(90deg,#2d8f4e,#c8a2c8,#FF8C00); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:8px; }
+.banner p { color:#aaa; font-size:clamp(13px,2.5vw,18px); }
+.banner .tagline { font-size:clamp(16px,3vw,24px); color:#FECA57; margin-top:12px; font-weight:600; }
+.flags { font-size:40px; margin-bottom:8px; }
+.games { max-width:900px; margin:0 auto; padding:20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+.game-card { background:linear-gradient(135deg,#1a1a2e,#2a1a3e); border-radius:16px; overflow:hidden; cursor:pointer; transition:transform 0.2s,box-shadow 0.2s; border:1px solid #333; }
+.game-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(200,162,200,0.2); border-color:#555; }
+.game-card:active { transform:translateY(-1px); }
+.card-icon { font-size:48px; text-align:center; padding:24px 0 8px; }
+.card-body { padding:12px 16px 20px; }
+.card-title { font-size:18px; font-weight:700; margin-bottom:6px; }
+.card-desc { color:#888; font-size:13px; line-height:1.5; margin-bottom:10px; }
+.card-tag { display:inline-block; background:#222; color:#aaa; font-size:11px; padding:3px 10px; border-radius:20px; }
+.card-play { background:linear-gradient(90deg,#2d8f4e,#FF8C00); color:#fff; font-size:14px; font-weight:700; padding:10px; text-align:center; border-radius:8px; margin-top:12px; }
+.gplay-badge { text-align:center; padding:20px; color:#666; font-size:13px; }
+.gplay-badge span { color:#FECA57; }
+footer { text-align:center; padding:30px; color:#444; font-size:12px; }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <div class="flags">🇵🇰 ❤️ 🇮🇳</div>
+  <h1>IndoPak.love</h1>
+  <p>Games that spread love between Pakistan & India</p>
+  <div class="tagline">❤️ Love Wins ❤️</div>
+</div>
+
+<div class="games">
+  <div class="game-card" onclick="play('indo-pak-runner.html')">
+    <div class="card-icon">🏃</div>
+    <div class="card-body">
+      <div class="card-title">IndoPak Runner</div>
+      <div class="card-desc">Run through a transforming world. Collect hearts, dodge hate obstacles. The further you go, the more the world unites!</div>
+      <span class="card-tag">🏃 Endless Runner</span>
+      <div class="card-play">▶ Play Now</div>
+    </div>
+  </div>
+
+  <div class="game-card" onclick="play('games/bridge-builder.html')">
+    <div class="card-icon">🌉</div>
+    <div class="card-body">
+      <div class="card-title">Bridge Builder</div>
+      <div class="card-desc">Match 3+ tiles to build bridges between nations. Mr. Hate places obstacles but love always finds a way.</div>
+      <span class="card-tag">🧩 Puzzle</span>
+      <div class="card-play">▶ Play Now</div>
+    </div>
+  </div>
+
+  <div class="game-card" onclick="play('games/rhythm-of-harmony.html')">
+    <div class="card-icon">🎵</div>
+    <div class="card-body">
+      <div class="card-title">Rhythm of Harmony</div>
+      <div class="card-desc">Tabla meets Sitar! Tap to the beat of Pakistani and Indian music. Build unity through the universal language of sound.</div>
+      <span class="card-tag">🎵 Rhythm Game</span>
+      <div class="card-play">▶ Play Now</div>
+    </div>
+  </div>
+
+  <div class="game-card" onclick="play('games/dosti-diaries.html')">
+    <div class="card-icon">💌</div>
+    <div class="card-body">
+      <div class="card-title">The Dosti Diaries</div>
+      <div class="card-desc">Ahmed 🇵🇰 and Priya 🇮🇳 become pen pals despite their families' prejudice. Your choices determine if love conquers hate.</div>
+      <span class="card-tag">📖 Visual Novel</span>
+      <div class="card-play">▶ Play Now</div>
+    </div>
+  </div>
+
+  <div class="game-card" onclick="play('games/clash-of-hearts.html')">
+    <div class="card-icon">⚔️</div>
+    <div class="card-body">
+      <div class="card-title">Clash of Hearts</div>
+      <div class="card-desc">Turn-based battle where Pakistan vs India... until they realize the true enemy is Division. United they are unstoppable!</div>
+      <span class="card-tag">⚔️ RPG Battle</span>
+      <div class="card-play">▶ Play Now</div>
+    </div>
+  </div>
+</div>
+
+<div class="gplay-badge">
+  📱 Available on <strong>IndoPak Games</strong> app (Android)<br>
+  Coming soon to Google Play Store <span>�arket</span>
+</div>
+
+<footer>
+  IndoPak.love — Building bridges through games 🇵🇰❤️🇮🇳
+</footer>
+
+<script>
+function play(page){ window.location.href = page; }
+</script>
+</body>
+</html>

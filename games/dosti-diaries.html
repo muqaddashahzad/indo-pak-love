@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>The Dosti Diaries — IndoPak.love</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0d0d1a; display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; font-family:Georgia,serif; }
+#gameCanvas { display:block; border-radius:12px; box-shadow:0 0 60px rgba(200,162,200,0.2); cursor:pointer; touch-action:none; }
+#loading { position:fixed; top:0;left:0;right:0;bottom:0; background:#0d0d1a; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#f0f0f0; font-size:18px; z-index:100; transition:opacity 0.5s; }
+#loading .heart { font-size:52px; animation:heartbeat 1s infinite; }
+@keyframes heartbeat { 0%,100%{transform:scale(1)} 15%{transform:scale(1.3)} 30%{transform:scale(1)} }
+</style>
+</head>
+<body>
+<div id="loading"><div class="heart">💌</div><div>Opening the diary...</div></div>
+<canvas id="gameCanvas"></canvas>
+<script>
+// ═══════════════════════════════════════════════════════
+//  The Dosti Diaries — A story of friendship
+//  IndoPak.love
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const maxW=800, maxH=600, ratio=maxW/maxH;
+  let w=window.innerWidth*0.97, h=w/ratio;
+  if(h>window.innerHeight*0.95){h=window.innerHeight*0.95; w=h*ratio;}
+  canvas.width=maxW; canvas.height=maxH;
+  canvas.style.width=w+'px'; canvas.style.height=h+'px';
+}
+resize(); window.addEventListener('resize',resize);
+
+// ── Layout ─────────────────────────────────────────────
+const MARGIN=40, PANEL_W=320, PANEL_H=360;
+const L_PANEL_X=MARGIN, R_PANEL_X=800-MARGIN-PANEL_W;
+const PANEL_Y=50;
+const DIALOGUE_Y=PANEL_Y+PANEL_H+20;
+const CHOICE_Y=DIALOGUE_Y+90;
+
+// ── State ─────────────────────────────────────────────
+let state='loading';
+let chapter=0, scene=0, unityScore=50, choiceMade=false;
+let frameCount=0, transitionAlpha=0, transitioning=false, transitionNext=null;
+let highScore=parseInt(localStorage.getItem('dd_hs')||'0');
+let musicStarted=false;
+
+// ── Audio ──────────────────────────────────────────────
+let audioCtx=null;
+function initAudio(){if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext);}if(audioCtx.state==='suspended')audioCtx.resume();}
+function tone(f,t,dur=0.3,vol=0.15){
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(f,audioCtx.currentTime);
+  g.gain.setValueAtTime(vol,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur);
+}
+function playChord(f1,f2,f3,dur=0.5){
+  [f1,f2,f3].forEach((f,i)=>setTimeout(()=>tone(f,'sine',dur,0.1),i*30));
+}
+const sfxPage=()=>{tone(600,'sine',0.08,0.1);setTimeout(()=>tone(800,'sine',0.06,0.08),50);};
+const sfxChoice=()=>{playChord(392,494,587,0.4);};
+const sfxHeart=()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,'sine',0.15,0.15),i*60));};
+const sfxBitter=()=>{[392,330,262].forEach((f,i)=>setTimeout(()=>tone(f,'sine',0.3,0.1),i*150));};
+
+// ── Chapters & Scenes ──────────────────────────────────
+// Each scene: { side, character, dialogue, bg, unityChange }
+const CHAPTERS=[
+  {
+    title:'Chapter 1: The Letter',
+    bg:'mountain',
+    scenes:[
+      {side:'pk',character:'Ahmed',dialogue:'ayaam hai! Another boring day in the village. Papa always says, "India walo se door raho." But why?',unityChange:0},
+      {side:'pk',character:'Ahmed',dialogue:'One day, a letter came... with a strange stamp. Not from Pakistan. From India.',unityChange:5},
+      {side:'both',character:'Letter',dialogue:'"Dear Ahmed, my name is Priya. Our teacher said we should write to a Pakistani child for the peace project. I hope we can be friends! - Priya, Delhi"',unityChange:10},
+      {side:'pk',character:'Ahmed',dialogue:'Friends? With India? I showed Papa... he frowned. But I felt something warm in my chest.',unityChange:5},
+      {side:'choice',choices:[
+        {text:'Write back with love ❤️',unityChange:15,next:{chapter:1,scene:5}},
+        {text:'Hide the letter from Papa 😔',unityChange:-10,next:{chapter:1,scene:5}},
+      ]},
+      {side:'pk',character:'Ahmed',dialogue:'I wrote back... about my pet goat, the mountains, my favorite chai.',unityChange:5},
+    ]
+  },
+  {
+    title:'Chapter 2: The Reply',
+    bg:'coastal',
+    scenes:[
+      {side:'in',character:'Priya',dialogue:'Maa said no Pakistani is trustworthy. But this letter... it felt like home.',unityChange:0},
+      {side:'in',character:'Priya',dialogue:'Ahmed wrote about his village in the mountains. I imagined the snow! I wrote back about our mango orchard.',unityChange:5},
+      {side:'both',character:'Letters',dialogue:'We wrote every week. Letters flew across the border like little birds carrying hope.',unityChange:10},
+      {side:'in',character:'Priya',dialogue:'One day, a man came to our house. "Those letters must stop," he said. "Friendship is weakness."',unityChange:-5},
+      {side:'choice',choices:[
+        {text:'Keep writing secretly 💌',unityChange:10,next:{chapter:2,scene:5}},
+        {text:'Stop writing to stay safe 😢',unityChange:-15,next:{chapter:2,scene:5}},
+      ]},
+      {side:'in',character:'Priya',dialogue:'But Ahmed and I... we found a way. We never stopped.',unityChange:5},
+    ]
+  },
+  {
+    title:'Chapter 3: The Storm',
+    bg:'city',
+    scenes:[
+      {side:'both',character:'Tension',dialogue:'One day, riots broke out in the city. TV showed burning shops. My blood ran cold.',unityChange:-10},
+      {side:'pk',character:'Ahmed',dialogue:'I heard some boys saying, "India did this!" They wanted to hurt anyone who looked Indian.',unityChange:-5},
+      {side:'in',character:'Priya',dialogue:'On the news, they showed Pakistan. Same fires. Same hate. Who benefits from this?',unityChange:-5},
+      {side:'both',character:'Realization',dialogue:'An old man on TV said: "The fire that burns your neighbor\'s house will burn yours too."',unityChange:10},
+      {side:'choice',choices:[
+        {text:'Call Ahmed to check if he\'s safe 📞',unityChange:15,next:{chapter:3,scene:4}},
+        {text:'Too scared to reach out 😰',unityChange:-10,next:{chapter:3,scene:4}},
+      ]},
+      {side:'pk',character:'Ahmed',dialogue:'Priya called! Even with the tension, she called! "I was so worried about you," she said.',unityChange:15},
+    ]
+  },
+  {
+    title:'Chapter 4: Standing Strong',
+    bg:'mountain',
+    scenes:[
+      {side:'both',character:'Together',dialogue:'We decided: we would stand for our friendship. No matter what our families said.',unityChange:10},
+      {side:'pk',character:'Ahmed',dialogue:'I told Papa: "The politicians fight, but the people just want to live in peace." Papa was quiet.',unityChange:10},
+      {side:'in',character:'Priya',dialogue:'My mother asked, "Why do you care about them?" I said: "Because they\'re like us. They love their children. They want peace."',unityChange:10},
+      {side:'both',character:'The Plan',dialogue:'We decided to meet at the border — Wagah-Attari. Where people gather to watch the flag ceremony.',unityChange:15},
+      {side:'choice',choices:[
+        {text:'Go with courage and hope 🌟',unityChange:20,next:{chapter:4,scene:5}},
+        {text:'Go but prepare for disappointment 😔',unityChange:5,next:{chapter:4,scene:5}},
+      ]},
+      {side:'pk',character:'Ahmed',dialogue:'At Wagah, I saw her. Holding a little Pakistani flag. And I held my Indian flag... together we waved them.',unityChange:20},
+    ]
+  },
+  {
+    title:'Chapter 5: The Reunion',
+    bg:'border',
+    scenes:[
+      {side:'both',character:'Wagah Border',dialogue:'The crowd watched us. Some smiled. Some were confused. But nobody looked away.',unityChange:10},
+      {side:'pk',character:'Ahmed',dialogue:'An old soldier approached. "Beta, I have grandchildren your age. This... this gives me hope," he said with tears.',unityChange:15},
+      {side:'in',character:'Priya',dialogue:'Mothers on both sides started clapping. For their children. For peace.',unityChange:15},
+      {side:'both',character:'The Promise',dialogue:'We promised: whatever happens, we will always remember — we chose love over hate.',unityChange:20},
+      {side:'final',dialogue:'The End',unityChange:0},
+    ]
+  }
+];
+
+function getScene(){
+  if(chapter>=CHAPTERS.length)return null;
+  const ch=CHAPTERS[chapter];
+  if(scene>=ch.scenes.length)return null;
+  return ch.scenes[scene];
+}
+
+// ── Background Drawers ──────────────────────────────────
+function drawMountainBG(){
+  // Pakistani mountain village
+  const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+  grad.addColorStop(0,'#1a2a4a'); grad.addColorStop(1,'#2d4a2d');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Mountains
+  ctx.fillStyle='#3d6b3d';
+  ctx.beginPath(); ctx.moveTo(0,400); ctx.lineTo(150,200); ctx.lineTo(300,400); ctx.fill();
+  ctx.fillStyle='#4a7a4a';
+  ctx.beginPath(); ctx.moveTo(200,400); ctx.lineTo(400,150); ctx.lineTo(600,400); ctx.fill();
+  // Village
+  ctx.fillStyle='#8B7355';
+  ctx.fillRect(80,350,60,40); ctx.fillRect(250,340,50,50);
+  ctx.fillStyle='#2d8f4e';
+  ctx.fillRect(90,345,15,15); // door
+  // Snow caps
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  ctx.beginPath(); ctx.moveTo(350,150); ctx.lineTo(400,120); ctx.lineTo(450,150); ctx.lineTo(400,180); ctx.fill();
+}
+function drawCoastalBG(){
+  const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+  grad.addColorStop(0,'#1a3a5a'); grad.addColorStop(1,'#5a2d1a');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Ocean
+  ctx.fillStyle='rgba(100,150,255,0.3)';
+  for(let x=0;x<canvas.width;x+=30){
+    ctx.fillRect(x,350+Math.sin(x*0.03)*10,25,8);
+  }
+  // Palm trees
+  ctx.strokeStyle='#5a3a1a'; ctx.lineWidth=6;
+  ctx.beginPath(); ctx.moveTo(100,400); ctx.lineTo(90,300); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(650,400); ctx.lineTo(660,290); ctx.stroke();
+  // Leaves
+  ctx.fillStyle='#2d8f4e';
+  for(let i=0;i<5;i++){
+    ctx.beginPath();
+    ctx.ellipse(100+Math.cos(i*1.2)*30,300+Math.sin(i*1.2)*20,30,8,0,0,Math.PI*2); ctx.fill();
+  }
+  // House
+  ctx.fillStyle='#e8c97a';
+  ctx.fillRect(500,330,80,70);
+  ctx.beginPath(); ctx.moveTo(490,330); ctx.lineTo(540,280); ctx.lineTo(590,330); ctx.fill();
+}
+function drawCityBG(){
+  const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+  grad.addColorStop(0,'#2a2a3a'); grad.addColorStop(1,'#3a2a2a');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Buildings
+  for(let i=0;i<8;i++){
+    const x=i*100+20; const h=150+Math.sin(i*2)*80;
+    ctx.fillStyle=i%2===0?'#3a3a4a':'#4a3a3a';
+    ctx.fillRect(x,400-h,h*0.6,h);
+    // Windows
+    ctx.fillStyle='rgba(255,200,100,0.4)';
+    for(let wy=400-h+20;wy<390;wy+=25){
+      for(let wx=x+10;wx<x+h*0.6-10;wx+=20){
+        if(Math.random()>0.3)ctx.fillRect(wx,wy,12,15);
+      }
+    }
+  }
+}
+function drawBorderBG(){
+  const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+  const t=unityScore/100;
+  grad.addColorStop(0,lerpC('#1a1a2a','#2e1a2e',t));
+  grad.addColorStop(1,lerpC('#2a2a1a','#1a2e1a',t));
+  ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Gate silhouette
+  ctx.fillStyle='#555';
+  ctx.fillRect(370,200,60,200);
+  ctx.beginPath(); ctx.moveTo(350,200); ctx.lineTo(400,150); ctx.lineTo(450,200); ctx.fill();
+  // Flags
+  ctx.font='40px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('🇵🇰',350,180);
+  ctx.fillText('🇮🇳',450,180);
+  // Ground
+  ctx.fillStyle=lerpC('#444','#5a8f4e',t);
+  ctx.fillRect(0,400,canvas.width,100);
+}
+function lerpC(a,b,t){
+  const p=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+  const [ar,ag,ab]=p(a),[br,bg,bb]=p(b);
+  return`rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+}
+function drawBackground(bg){
+  if(bg==='mountain')drawMountainBG();
+  else if(bg==='coastal')drawCoastalBG();
+  else if(bg==='city')drawCityBG();
+  else if(bg==='border')drawBorderBG();
+  else {
+    const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+    grad.addColorStop(0,lerpC('#1a1a2a','#2e1a2e',unityScore/100));
+    grad.addColorStop(1,lerpC('#2a2a1a','#1a2e1a',unityScore/100));
+    ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+}
+
+// ── Panel Drawing ───────────────────────────────────────
+function drawCharacterPanel(x,y,w,h,side,character,alpha=1){
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  // Panel bg
+  const bgColor=side==='pk'?'rgba(45,143,78,0.15)':side==='in'?'rgba(255,140,0,0.15)':'rgba(150,100,180,0.15)';
+  ctx.fillStyle=bgColor;
+  ctx.beginPath(); ctx.roundRect(x,y,w,h,12); ctx.fill();
+  ctx.strokeStyle=side==='pk'?'#2d8f4e':side==='in'?'#FF8C00':'#c8a2c8';
+  ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(x,y,w,h,12); ctx.stroke();
+  
+  // Character
+  const charY=y+h*0.4;
+  // Head
+  ctx.fillStyle=side==='pk'?'#c8a27a':side==='in'?'#d4a574':'#b090c0';
+  ctx.beginPath(); ctx.arc(x+w/2,charY,w*0.22,0,Math.PI*2); ctx.fill();
+  // Eyes
+  ctx.fillStyle='#333';
+  ctx.beginPath(); ctx.arc(x+w/2-12,charY-5,3,0,Math.PI*2); ctx.arc(x+w/2+12,charY-5,3,0,Math.PI*2); ctx.fill();
+  // Smile
+  ctx.strokeStyle='#333'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(x+w/2,charY+5,10,0.2,Math.PI-0.2); ctx.stroke();
+  // Body
+  ctx.fillStyle=side==='pk'?'#2d8f4e':side==='in'?'#FF8C00':'#c8a2c8';
+  ctx.beginPath(); ctx.ellipse(x+w/2,charY+w*0.35,w*0.25,w*0.2,0,0,Math.PI*2); ctx.fill();
+  
+  // Name
+  ctx.fillStyle='#fff'; ctx.font='bold 14px Georgia'; ctx.textAlign='center';
+  ctx.fillText(character,x+w/2,y+h-25);
+  
+  ctx.restore();
+}
+
+// ── Choice Drawing ───────────────────────────────────────
+let choices=[];
+function drawChoices(){
+  const sc=getScene();
+  if(!sc||sc.side!=='choice')return;
+  choices=sc.choices;
+  
+  choices.forEach((ch,i)=>{
+    const cx=canvas.width/2; const cy=CHOICE_Y+i*70;
+    const hover=i; // simplified
+    ctx.fillStyle='rgba(0,0,0,0.7)';
+    ctx.beginPath(); ctx.roundRect(cx-240,cy-22,480,52,8); ctx.fill();
+    ctx.strokeStyle=ch.text.includes('❤️')?'#FF4B4B':ch.text.includes('💌')?'#c8a2c8':'#888';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(cx-240,cy-22,480,52,8); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='15px Georgia'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(ch.text,cx,cy);
+  });
+}
+
+// ── Dialogue Box ─────────────────────────────────────────
+let currentDialogue='', targetDialogue='', charIndex=0, lastCharTime=0, typing=false;
+function setDialogue(text){
+  targetDialogue=text; currentDialogue=''; charIndex=0; typing=true;
+}
+function updateDialogue(){
+  if(!typing)return;
+  if(charIndex<targetDialogue.length){
+    if(Date.now()-lastCharTime>25){
+      currentDialogue+=targetDialogue[charIndex]; charIndex++; lastCharTime=Date.now();
+    }
+  } else { typing=false; }
+}
+
+function drawDialogueBox(){
+  const sc=getScene();
+  if(!sc||sc.side==='choice'||sc.side==='final')return;
+  const bx=MARGIN, by=DIALOGUE_Y, bw=canvas.width-MARGIN*2, bh=90;
+  ctx.fillStyle='rgba(0,0,0,0.8)';
+  ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.stroke();
+  // Speaker
+  if(sc.character){
+    ctx.fillStyle=sc.side==='pk'?'#2d8f4e':sc.side==='in'?'#FF8C00':'#c8a2c8';
+    ctx.font='bold 13px Georgia'; ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(sc.character,bx+15,by+10);
+  }
+  // Text
+  ctx.fillStyle='#fff'; ctx.font='15px Georgia'; ctx.textAlign='left'; ctx.textBaseline='top';
+  const lines=wrapText(currentDialogue||targetDialogue,bw-30);
+  lines.forEach((l,i)=>ctx.fillText(l,bx+15,by+30+i*20));
+  // Continue indicator
+  if(!typing){
+    const blink=Math.sin(frameCount*0.1)>0;
+    if(blink){ctx.fillStyle='#888'; ctx.font='12px system-ui'; ctx.textAlign='right'; ctx.fillText('▼',bx+bw-15,by+bh-18);}
+  }
+}
+
+// ── Text Wrap ────────────────────────────────────────────
+function wrapText(text,maxW){
+  const words=text.split(' '); const lines=[]; let line='';
+  ctx.font='15px Georgia';
+  words.forEach(w=>{
+    const test=line+w+' ';
+    if(ctx.measureText(test).width>maxW&&line){lines.push(line.trim());line=w+' ';}
+    else line=test;
+  }); if(line)lines.push(line.trim());
+  return lines.slice(0,3);
+}
+
+// ── Unity Meter ──────────────────────────────────────────
+function drawUnityMeter(){
+  const mx=canvas.width-180, my=20, mw=150, mh=10;
+  ctx.fillStyle='#222'; ctx.fillRect(mx,my,mw,mh);
+  const t=unityScore/100;
+  const color=t>0.5?'#4CAF50':t>0.25?'#FECA57':'#FF4B4B';
+  ctx.fillStyle=color; ctx.shadowColor=color; ctx.shadowBlur=6;
+  ctx.fillRect(mx,my,mw*t,mh); ctx.shadowBlur=0;
+  ctx.fillStyle='#aaa'; ctx.font='10px system-ui'; ctx.textAlign='left';
+  ctx.fillText('❤ Unity',mx,my-4);
+  // Value
+  ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='11px system-ui';
+  ctx.fillText(`${unityScore}%`,mx+mw,my-4);
+}
+
+// ── Title Screen ─────────────────────────────────────────
+function drawTitleScreen(){
+  const t=performance.now()*0.001;
+  drawBackground('mountain');
+  
+  // Hearts floating
+  for(let i=0;i<8;i++){
+    const hx=(i*120+t*20)%canvas.width;
+    const hy=100+Math.sin(t+i*1.5)*60+i*30;
+    ctx.globalAlpha=0.3; ctx.font='24px sans-serif';
+    ctx.fillText('❤️',hx,hy); ctx.globalAlpha=1;
+  }
+  
+  ctx.shadowColor='#c8a2c8'; ctx.shadowBlur=30;
+  ctx.fillStyle='#fff'; ctx.font='bold 46px Georgia'; ctx.textAlign='center';
+  ctx.fillText('The Dosti Diaries',canvas.width/2,160);
+  ctx.shadowBlur=0;
+  
+  ctx.fillStyle='#c8a2c8'; ctx.font='bold 20px Georgia';
+  ctx.fillText('A Story of Friendship Across Borders 💌',canvas.width/2,210);
+  
+  ctx.fillStyle='#aaa'; ctx.font='14px Georgia';
+  ctx.fillText('Chapter 1: The Letter',canvas.width/2,260);
+  
+  ctx.fillStyle='#888'; ctx.font='13px Georgia';
+  ctx.fillText('Ahmed (Pakistan) & Priya (India)',canvas.width/2,290);
+  ctx.fillText('Two children. Two nations. One friendship.',canvas.width/2,312);
+  
+  const pulse=0.7+Math.sin(t*3)*0.3;
+  ctx.globalAlpha=pulse; ctx.fillStyle='#fff'; ctx.font='bold 17px system-ui';
+  ctx.fillText('TAP TO BEGIN',canvas.width/2,400); ctx.globalAlpha=1;
+  
+  ctx.fillStyle='#555'; ctx.font='12px system-ui';
+  ctx.fillText('IndoPak.love — Love knows no border',canvas.width/2,canvas.height-20);
+}
+
+// ── Ending Screens ────────────────────────────────────────
+function drawEnding(){
+  const t=performance.now()*0.001;
+  const bg=ctx.createLinearGradient(0,0,0,canvas.height);
+  if(unityScore>=80){
+    bg.addColorStop(0,'#1a2e1a'); bg.addColorStop(1,'#2e4a2e');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.shadowColor='#4CAF50'; ctx.shadowBlur=30;
+    ctx.fillStyle='#4CAF50'; ctx.font='bold 42px Georgia'; ctx.textAlign='center';
+    ctx.fillText('🌟 Ending A: Love Wins 🌟',canvas.width/2,120);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#fff'; ctx.font='16px Georgia';
+    ctx.fillText('Ahmed and Priya\'s friendship changed their families.',canvas.width/2,190);
+    ctx.fillText('Their story spread across both nations.',canvas.width/2,215);
+    ctx.fillText('A movement began — children writing to each other.',canvas.width/2,240);
+    ctx.fillText('One day, the borders opened for a festival of peace.',canvas.width/2,265);
+    ctx.fillText('And it all started with one letter.',canvas.width/2,290);
+    ctx.fillStyle='#FECA57'; ctx.font='bold 18px Georgia';
+    ctx.fillText('Score: '+unityScore+' — The children chose love.',canvas.width/2,350);
+  } else if(unityScore>=40){
+    bg.addColorStop(0,'#2a2a1a'); bg.addColorStop(1,'#3a3a2a');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.shadowColor='#FECA57'; ctx.shadowBlur=20;
+    ctx.fillStyle='#FECA57'; ctx.font='bold 42px Georgia'; ctx.textAlign='center';
+    ctx.fillText('🌙 Ending B: Bittersweet 🌙',canvas.width/2,120);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#ccc'; ctx.font='15px Georgia';
+    ctx.fillText('Ahmed and Priya never stopped writing.',canvas.width/2,190);
+    ctx.fillText('Though their families remained divided, their letters continued.',canvas.width/2,215);
+    ctx.fillText('"Even if we never meet," Priya wrote, "you are my brother."',canvas.width/2,240);
+    ctx.fillText('Sometimes love plants seeds that bloom years later.',canvas.width/2,265);
+    ctx.fillStyle='#aaa'; ctx.font='16px Georgia';
+    ctx.fillText('Score: '+unityScore+' — Hope remains.',canvas.width/2,320);
+  } else {
+    bg.addColorStop(0,'#2a1a1a'); bg.addColorStop(1,'#3a2a2a');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.shadowColor='#FF4B4B'; ctx.shadowBlur=20;
+    ctx.fillStyle='#FF4B4B'; ctx.font='bold 42px Georgia'; ctx.textAlign='center';
+    ctx.fillText('💔 Ending C: Division 💔',canvas.width/2,120);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#aaa'; ctx.font='15px Georgia';
+    ctx.fillText('The letters stopped. The hate won... for now.',canvas.width/2,190);
+    ctx.fillText('But Ahmed kept Priya\'s letters in a box under his bed.',canvas.width/2,215);
+    ctx.fillText('He read them on lonely nights and whispered:',canvas.width/2,240);
+    ctx.fillText('"One day, Priya. One day."',canvas.width/2,265);
+    ctx.fillStyle='#666'; ctx.font='14px Georgia';
+    ctx.fillText('Score: '+unityScore+' — The fight continues.',canvas.width/2,320);
+  }
+  
+  ctx.fillStyle='#555'; ctx.font='12px system-ui';
+  ctx.fillText('IndoPak.love — Play again to find a better ending!',canvas.width/2,canvas.height-20);
+}
+
+// ── Chapter Title Card ────────────────────────────────────
+function drawChapterCard(){
+  if(transitioning&&transitionAlpha<1){
+    ctx.fillStyle=`rgba(0,0,0,${1-transitionAlpha})`;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.globalAlpha=transitionAlpha;
+    ctx.fillStyle='#fff'; ctx.font='bold 36px Georgia'; ctx.textAlign='center';
+    ctx.fillText(CHAPTERS[chapter].title,canvas.width/2,canvas.height/2-20);
+    ctx.font='16px Georgia'; ctx.fillStyle='#aaa';
+    ctx.fillText(CHAPTERS[chapter].bg==='mountain'?'🇵🇰':CHAPTERS[chapter].bg==='coastal'?'🇮🇳':CHAPTERS[chapter].bg==='city'?'🏙':'🚧',canvas.width/2,canvas.height/2+20);
+    ctx.globalAlpha=1;
+    transitionAlpha+=0.02;
+    if(transitionAlpha>=1){transitioning=false;}
+  }
+}
+
+// ── Input ───────────────────────────────────────────────
+canvas.addEventListener('pointerdown',e=>{
+  initAudio();
+  const rect=canvas.getBoundingClientRect();
+  const x=(e.clientX-rect.left)*(canvas.width/parseFloat(canvas.style.width));
+  const y=(e.clientY-rect.top)*(canvas.height/parseFloat(canvas.style.height));
+  
+  if(state==='title'){startGame();return;}
+  if(state==='ending'){chapter=0;scene=0;unityScore=50;state='title';return;}
+  if(state!=='playing')return;
+  
+  // Check choice buttons
+  const sc=getScene();
+  if(sc&&sc.side==='choice'&&!choiceMade){
+    choices.forEach((ch,i)=>{
+      const cy=CHOICE_Y+i*70;
+      if(x>=canvas.width/2-240&&x<=canvas.width/2+240&&y>=cy-22&&y<=cy+30){
+        unityScore=Math.max(0,Math.min(100,unityScore+ch.unityChange));
+        sfxChoice();
+        choiceMade=true;
+        const next=ch.next||{chapter:chapter,scene:scene+1};
+        transitionNext=next;
+        transitioning=true; transitionAlpha=0;
+        setTimeout(()=>{
+          chapter=next.chapter; scene=next.scene; choiceMade=false;
+          const s=getScene(); if(s&&s.dialogue)setDialogue(s.dialogue);
+        },1500);
+      }
+    });
+    return;
+  }
+  
+  // Advance dialogue
+  if(!transitioning){
+    if(typing){currentDialogue=targetDialogue;typing=false;}
+    else{
+      sfxPage();
+      const s=getScene();
+      if(s&&s.side==='final'){state='ending';sfxHeart();return;}
+      scene++;
+      choiceMade=false;
+      const next=getScene();
+      if(!next){state='ending';sfxHeart();return;}
+      if(next.side==='choice'){choices=next.choices;}
+      else setDialogue(next.dialogue);
+      // Chapter transition
+      if(scene===0&&chapter>0){
+        transitioning=true; transitionAlpha=0;
+        setTimeout(()=>{transitioning=false;},2000);
+      }
+    }
+  }
+});
+
+function startGame(){
+  chapter=0;scene=0;unityScore=50;choiceMade=false;
+  state='playing';
+  const sc=getScene();
+  if(sc&&sc.dialogue)setDialogue(sc.dialogue);
+  transitioning=true; transitionAlpha=0;
+  setTimeout(()=>{transitioning=false;},1500);
+}
+
+// ── Main Loop ─────────────────────────────────────────────
+function loop(){
+  frameCount++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  
+  if(state==='loading'){
+    document.getElementById('loading').style.opacity='0';
+    setTimeout(()=>{document.getElementById('loading').style.display='none';},500);
+    state='title'; return;
+  }
+  
+  if(state==='title'){drawTitleScreen();requestAnimationFrame(loop);return;}
+  
+  if(state==='ending'){drawEnding();requestAnimationFrame(loop);return;}
+  
+  if(state==='playing'){
+    const sc=getScene();
+    updateDialogue();
+    if(!sc){state='ending';sfxHeart();return;}
+    
+    // Background
+    drawBackground(CHAPTERS[chapter].bg);
+    
+    // Panels
+    const alpha=transitioning?1-transitionAlpha:1;
+    if(sc.side==='pk'||sc.side==='both'){
+      drawCharacterPanel(L_PANEL_X,PANEL_Y,PANEL_W,PANEL_H,'pk','Ahmed',alpha);
+    }
+    if(sc.side==='in'||sc.side==='both'){
+      drawCharacterPanel(R_PANEL_X,PANEL_Y,PANEL_W,PANEL_H,'in','Priya',alpha);
+    }
+    if(sc.side==='both'&&sc.character==='Letter'){
+      // Show letter
+      ctx.fillStyle='rgba(255,250,230,0.9)';
+      ctx.beginPath(); ctx.roundRect(canvas.width/2-150,PANEL_Y+80,300,200,8); ctx.fill();
+      ctx.strokeStyle='#aaa'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.roundRect(canvas.width/2-150,PANEL_Y+80,300,200,8); ctx.stroke();
+      ctx.fillStyle='#333'; ctx.font='13px Georgia'; ctx.textAlign='center';
+      ctx.fillText('📮 A Letter from Across the Border',canvas.width/2,PANEL_Y+105);
+    }
+    
+    drawDialogueBox();
+    if(sc.side==='choice')drawChoices();
+    drawUnityMeter();
+    
+    // Chapter card
+    if(transitioning)drawChapterCard();
+    
+    // Chapter indicator
+    ctx.fillStyle='#555'; ctx.font='11px system-ui'; ctx.textAlign='left';
+    ctx.fillText(`Ch ${chapter+1} — ${CHAPTERS[chapter].title}`,MARGIN,canvas.height-15);
+  }
+  
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>

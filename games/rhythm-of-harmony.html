@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Rhythm of Harmony — IndoPak.love</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a12; display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; font-family:system-ui,sans-serif; }
+#gameCanvas { display:block; border-radius:12px; box-shadow:0 0 60px rgba(200,162,200,0.3); cursor:pointer; touch-action:none; }
+#loading { position:fixed; top:0;left:0;right:0;bottom:0; background:#0a0a12; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#f0f0f0; font-size:18px; z-index:100; transition:opacity 0.5s; }
+#loading .music { font-size:52px; animation:bounce 0.6s ease-in-out infinite alternate; }
+@keyframes bounce { from{transform:scale(1) rotate(-5deg)} to{transform:scale(1.1) rotate(5deg)} }
+</style>
+</head>
+<body>
+<div id="loading"><div class="music">🎵</div><div>Composing harmony...</div></div>
+<canvas id="gameCanvas"></canvas>
+<script>
+// ═══════════════════════════════════════════════════════
+//  Rhythm of Harmony — Music from both lands
+//  IndoPak.love
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const maxW=800, maxH=580, ratio=maxW/maxH;
+  let w=window.innerWidth*0.97, h=w/ratio;
+  if(h>window.innerHeight*0.95){h=window.innerHeight*0.95; w=h*ratio;}
+  canvas.width=maxW; canvas.height=maxH;
+  canvas.style.width=w+'px'; canvas.style.height=h+'px';
+}
+resize(); window.addEventListener('resize',resize);
+
+// ── Layout ─────────────────────────────────────────────
+const LANE_X=[120,360,600]; const LANE_W=140; const HIT_Y=480; const SPAWN_Y=-30;
+const NOTE_R=28; const KEYS=['d','f','j','k'];
+
+// ── Audio Engine ────────────────────────────────────────
+let audioCtx=null, masterGain=null;
+function initAudio(){if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext);masterGain=audioCtx.createGain();masterGain.gain.value=0.5;masterGain.connect(audioCtx.destination);}}
+function tone(freq,type='sine',dur=0.15,vol=0.3,freqEnd=null){
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type; o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+  if(freqEnd)o.frequency.exponentialRampToValueAtTime(freqEnd,audioCtx.currentTime+dur);
+  g.gain.setValueAtTime(vol,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+  o.connect(g); g.connect(masterGain); o.start(); o.stop(audioCtx.currentTime+dur);
+}
+function toneTabla(){tone(120,'sine',0.1,0.4);setTimeout(()=>tone(80,'triangle',0.15,0.3),50);}
+function toneSitar(){tone(440,'triangle',0.2,0.25,880);setTimeout(()=>tone(550,'triangle',0.15,0.2),80);}
+function toneVocal(){tone(330,'sine',0.3,0.2,220);tone(440,'sine',0.3,0.15,330);}
+function toneDiscord(){tone(80,'sawtooth',0.2,0.3);}
+function sfxHit(perfect){const f=perfect?880:660;tone(f,'sine',0.08,0.3);setTimeout(()=>tone(f*1.25,'sine',0.08,0.25),60);}
+function sfxMiss(){tone(100,'sawtooth',0.2,0.3);}
+function sfxCombo(){[523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,'sine',0.15,0.25),i*80));}
+function sfxUnity(){[262,330,392,523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,'sine',0.2,0.3),i*60));}
+function playDrone(){
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sawtooth'; o.frequency.value=55;
+  g.gain.setValueAtTime(0.04,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+2);
+  o.connect(g); g.connect(masterGain); o.start(); o.stop(audioCtx.currentTime+2);
+}
+
+// ── Game State ─────────────────────────────────────────
+let state='loading', score=0, combo=0, maxCombo=0;
+let notes=[], laneNotes=[0,0,0]; // notes in each lane for visual
+let bpm=100, beatInterval=60000/bpm, lastBeat=0, beatCount=0;
+let perfectWindow=45, goodWindow=80;
+let unityLevel=0, unityMeter=0, unityMeterMax=100;
+let lastNoteTime=[0,0,0], lastLanes=[-1,-1];
+let frameCount=0, flashTimer=0, flashColor='#fff';
+let lives=3, misses=0;
+let hitEffects=[], particleEffects=[];
+let highScore=parseInt(localStorage.getItem('rh_hs')||'0');
+let gameTime=0, lastTime=0;
+
+// ── Note Types ─────────────────────────────────────────
+const LANE_TYPES=[
+  {name:'Tabla',color:'#2d8f4e',symbol:'🥁',instrument:'tabla',freq:120},
+  {name:'Vocals',color:'#c8a2c8',symbol:'🎤',instrument:'vocal',freq:330},
+  {name:'Sitar',color:'#FF8C00',symbol:'🪕',instrument:'sitar',freq:440},
+];
+const DISCORD_TYPE={name:'Discord',color:'#FF4B4B',symbol:'💀',instrument:'discord',freq:80};
+
+function spawnNote(lane,isDiscord=false){
+  const type=isDiscord?DISCORD_TYPE:LANE_TYPES[lane];
+  notes.push({lane,type,y:SPAWN_Y,active:true,isDiscord,hit:false,missed:false});
+}
+
+// ── Rhythm Pattern Generator ────────────────────────────
+function shouldSpawnNote(beat){
+  // Every other beat has a note, alternating lanes
+  const pattern=beat%8;
+  if(pattern===0||pattern===4)return Math.floor(Math.random()*3); // beat notes
+  if(pattern===2||pattern===6){
+    if(Math.random()>0.4)return Math.floor(Math.random()*3); // syncopation
+  }
+  return -1;
+}
+function shouldSpawnDiscord(beat){
+  // Discord appears every ~4 beats after beat 8
+  if(beat<8)return false;
+  if(beat%6===3)return true;
+  return false;
+}
+
+// ── Particles ────────────────────────────────────────────
+function spawnParticles(x,y,color,count=8){
+  for(let i=0;i<count;i++){
+    particleEffects.push({x,y,vx:(Math.random()-0.5)*10,vy:(Math.random()-1)*8,life:1,decay:0.025+Math.random()*0.02,size:5+Math.random()*7,color});
+  }
+}
+function updateParticles(){
+  for(let i=particleEffects.length-1;i>=0;i--){
+    const p=particleEffects[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.3; p.life-=p.decay;
+    if(p.life<=0)particleEffects.splice(i,1);
+  }
+}
+function drawParticles(){
+  particleEffects.forEach(p=>{
+    ctx.globalAlpha=p.life; ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+}
+
+// ── Input ────────────────────────────────────────────────
+const keyLane={'d':0,'f':1,'j':2,'k':3};
+let keyDown=[];
+document.addEventListener('keydown',e=>{
+  initAudio();
+  const k=e.key.toLowerCase();
+  if(state==='start'){state='playing';lastTime=performance.now();return;}
+  if(state==='gameover'){resetGame();return;}
+  if(state!=='playing')return;
+  if(keyDown[k])return;
+  keyDown[k]=true;
+  const lane=keyLane[k];
+  if(lane===undefined)return;
+  checkHit(lane);
+});
+document.addEventListener('keyup',e=>{keyDown[e.key.toLowerCase()]=false;});
+
+canvas.addEventListener('pointerdown',e=>{
+  initAudio();
+  const rect=canvas.getBoundingClientRect();
+  const x=(e.clientX-rect.left)*(canvas.width/parseFloat(canvas.style.width));
+  if(state==='start'){state='playing';lastTime=performance.now();return;}
+  if(state==='gameover'){resetGame();return;}
+  if(state!=='playing')return;
+  const lane=Math.floor((x-80)/230);
+  if(lane>=0&&lane<=2)checkHit(lane);
+});
+
+function checkHit(lane){
+  let bestNote=null, bestDist=Infinity;
+  for(const n of notes){
+    if(n.lane!==lane||!n.active||n.hit||n.missed)continue;
+    const dist=Math.abs(n.y-HIT_Y);
+    if(dist<bestDist){bestDist=dist;bestNote=n;}
+  }
+  if(!bestNote){sfxMiss(); combo=0; misses++; if(misses>=5){state='gameover';} return;}
+  if(bestNote.isDiscord){sfxMiss(); combo=0; spawnParticles(LANE_X[lane],HIT_Y,'#FF4B4B',10); flashTimer=8; flashColor='#FF4B4B'; return;}
+  const dist=Math.abs(bestNote.y-HIT_Y);
+  if(dist<=perfectWindow){
+    bestNote.hit=true; bestNote.active=false;
+    const pts=100+combo*10; score+=pts; combo++; maxCombo=Math.max(maxCombo,combo);
+    sfxHit(true); spawnParticles(LANE_X[lane],HIT_Y,LANE_TYPES[lane].color,12);
+    flashTimer=6; flashColor='#4CAF50';
+    // Unity meter - hit both PK(IN) and IN(PK) instruments in sequence
+    if(lastLanes[1]!==-1&&lastLanes[1]!==lane){
+      // Cross-cultural hit!
+      unityMeter=Math.min(unityMeterMax,unityMeter+20);
+      if(unityMeter>=unityMeterMax){sfxUnity(); unityMeter=0; unityLevel=Math.min(1,unityLevel+0.1);}
+    }
+    lastLanes=[lastLanes[1],lane];
+    hitEffects.push({lane,x:LANE_X[lane],y:HIT_Y,life:1,type:'perfect'});
+  } else if(dist<=goodWindow){
+    bestNote.hit=true; bestNote.active=false;
+    const pts=50+combo*5; score+=pts; combo++; sfxHit(false);
+    spawnParticles(LANE_X[lane],HIT_Y,LANE_TYPES[lane].color,6);
+    flashTimer=4; flashColor='#FECA57';
+    hitEffects.push({lane,x:LANE_X[lane],y:HIT_Y,life:1,type:'good'});
+  } else {
+    sfxMiss(); combo=0;
+  }
+}
+
+// ── Game Loop ────────────────────────────────────────────
+function resetGame(){
+  notes=[]; score=0; combo=0; maxCombo=0; misses=0; lives=3;
+  unityLevel=0; unityMeter=0; beatCount=0; lastBeat=0;
+  hitEffects=[]; particleEffects=[]; flashTimer=0;
+  lastLanes=[-1,-1];
+  bpm=100+Math.min(40,(score/500)*40);
+  beatInterval=60000/bpm; lastTime=performance.now();
+  state='playing';
+}
+
+function update(dt){
+  gameTime+=dt;
+  // Beat scheduler
+  if(gameTime-lastBeat>=beatInterval){
+    lastBeat=gameTime;
+    beatCount++;
+    const lane=shouldSpawnNote(beatCount);
+    if(lane>=0)spawnNote(lane);
+    if(shouldSpawnDiscord(beatCount)){
+      const dlane=Math.floor(Math.random()*3);
+      spawnNote(dlane,true);
+    }
+    // Speed up
+    bpm=Math.min(160,100+Math.floor(score/300)*3);
+    beatInterval=60000/bpm;
+  }
+  
+  // Update notes
+  const fallSpeed=280*(dt/1000);
+  for(let i=notes.length-1;i>=0;i--){
+    const n=notes[i];
+    if(!n.active){notes.splice(i,1);continue;}
+    n.y+=fallSpeed;
+    if(n.y>HIT_Y+100&&!n.missed&&!n.hit){
+      n.missed=true; n.active=false;
+      if(!n.isDiscord){combo=0;misses++;sfxMiss();}
+      notes.splice(i,1);
+      if(!n.isDiscord&&misses>=5){state='gameover';return;}
+    }
+    if(n.y>canvas.height+50){notes.splice(i,1);}
+  }
+  
+  // Update effects
+  for(let i=hitEffects.length-1;i>=0;i--){
+    hitEffects[i].life-=0.05;
+    if(hitEffects[i].life<=0)hitEffects.splice(i,1);
+  }
+  updateParticles();
+  if(flashTimer>0)flashTimer--;
+}
+
+function draw(){
+  // Background
+  const bg=ctx.createLinearGradient(0,0,0,canvas.height);
+  bg.addColorStop(0,lerpColor2('#0a0a12','#1a1a2e',unityLevel));
+  bg.addColorStop(1,lerpColor2('#101020','#2e1a1a',unityLevel));
+  ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  
+  // Lane backgrounds
+  LANE_TYPES.forEach((lt,i)=>{
+    const lx=LANE_X[i]-LANE_W/2;
+    const alpha=0.08+Math.sin(gameTime*0.003+i)*0.03;
+    ctx.fillStyle=lt.color; ctx.globalAlpha=alpha;
+    ctx.fillRect(lx,0,LANE_W,canvas.height);
+    ctx.globalAlpha=1;
+  });
+  
+  // Hit zone line
+  ctx.strokeStyle='#ffffff44'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,HIT_Y); ctx.lineTo(canvas.width,HIT_Y); ctx.stroke();
+  
+  // Hit zone circles
+  LANE_TYPES.forEach((lt,i)=>{
+    const pulse=Math.sin(gameTime*0.005)*3;
+    ctx.beginPath();
+    ctx.arc(LANE_X[i],HIT_Y,NOTE_R+pulse,0,Math.PI*2);
+    ctx.strokeStyle=lt.color; ctx.lineWidth=3;
+    ctx.shadowColor=lt.color; ctx.shadowBlur=15;
+    ctx.stroke(); ctx.shadowBlur=0;
+    // Symbol
+    ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ffffff88';
+    ctx.fillText(lt.symbol,LANE_X[i],HIT_Y);
+  });
+  
+  // Key labels
+  LANE_TYPES.forEach((lt,i)=>{
+    ctx.fillStyle='#ffffff44'; ctx.font='13px system-ui'; ctx.textAlign='center';
+    ctx.fillText(KEYS[i].toUpperCase(),LANE_X[i],HIT_Y+50);
+  });
+  
+  // Notes
+  notes.forEach(n=>{
+    if(!n.active)return;
+    const alpha=n.isDiscord?0.9:0.95;
+    ctx.globalAlpha=alpha;
+    ctx.shadowColor=n.type.color; ctx.shadowBlur=12;
+    // Circle
+    const grad=ctx.createRadialGradient(LANE_X[n.lane],n.y,2,LANE_X[n.lane],n.y,NOTE_R);
+    grad.addColorStop(0,n.type.color); grad.addColorStop(1,lerpColor2(n.type.color,'#000',0.4));
+    ctx.fillStyle=grad;
+    ctx.beginPath(); ctx.arc(LANE_X[n.lane],n.y,NOTE_R,0,Math.PI*2); ctx.fill();
+    // Symbol
+    ctx.font='20px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(n.type.symbol,LANE_X[n.lane],n.y);
+    ctx.globalAlpha=1; ctx.shadowBlur=0;
+  });
+  
+  // Hit effects
+  hitEffects.forEach(h=>{
+    ctx.globalAlpha=h.life;
+    ctx.strokeStyle=h.type==='perfect'?'#4CAF50':'#FECA57';
+    ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(h.x,h.y,NOTE_R*(2-h.life),0,Math.PI*2); ctx.stroke();
+    ctx.globalAlpha=1;
+  });
+  
+  drawParticles();
+  
+  // Flash overlay
+  if(flashTimer>0){
+    ctx.fillStyle=`${flashColor}${Math.floor(flashTimer*15).toString(16).padStart(2,'0')}`;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+  
+  // HUD
+  drawHUD();
+}
+
+function lerpColor2(a,b,t){
+  const p=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+  const [ar,ag,ab]=p(a),[br,bg,bb]=p(b);
+  return`rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+}
+
+function drawHUD(){
+  ctx.fillStyle='#fff'; ctx.font='bold 22px system-ui'; ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText(`Score: ${score}`,20,18);
+  ctx.fillStyle='#aaa'; ctx.font='13px system-ui';
+  ctx.fillText(`Best: ${highScore}`,20,44);
+  
+  ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='bold 18px system-ui';
+  ctx.fillText(`Combo: ${combo}x`,canvas.width-20,18);
+  if(maxCombo>0){
+    ctx.fillStyle='#FECA57'; ctx.font='12px system-ui';
+    ctx.fillText(`Max: ${maxCombo}x`,canvas.width-20,38);
+  }
+  
+  // Lives
+  ctx.textAlign='center'; ctx.font='16px system-ui';
+  ctx.fillText('Lives: '+(lives-misses>=0?'❤️'.repeat(Math.max(0,lives-misses)):'💔'),canvas.width/2,18);
+  
+  // BPM
+  ctx.fillStyle='#888'; ctx.font='12px system-ui';
+  ctx.fillText(`${bpm} BPM`,canvas.width/2,42);
+  
+  // Unity meter
+  const mx=canvas.width/2-75, my=canvas.height-28, mw=150, mh=10;
+  ctx.fillStyle='#222'; ctx.fillRect(mx,my,mw,mh);
+  ctx.fillStyle=lerpColor2('#8B0000','#FECA57',unityLevel);
+  ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=6;
+  ctx.fillRect(mx,my,mw*unityLevel,mh); ctx.shadowBlur=0;
+  ctx.fillStyle='#aaa'; ctx.font='10px system-ui'; ctx.textAlign='left';
+  ctx.fillText('❤ Harmony',mx,my-4);
+  
+  // Unity moment indicator
+  if(unityMeter>unityMeterMax*0.7){
+    ctx.fillStyle='#FECA57'; ctx.font='bold 12px system-ui'; ctx.textAlign='center';
+    ctx.fillText('🎵 Unity Moment! 🎵',canvas.width/2,my-20);
+  }
+}
+
+function drawStartScreen(){
+  const bg=ctx.createLinearGradient(0,0,0,canvas.height);
+  bg.addColorStop(0,'#0a0a12'); bg.addColorStop(1,'#1a0a2e');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  
+  // Musical waves
+  const t=performance.now()*0.001;
+  ctx.strokeStyle='#c8a2c840'; ctx.lineWidth=2;
+  for(let i=0;i<5;i++){
+    ctx.beginPath();
+    for(let x=0;x<canvas.width;x+=5){
+      const y=250+Math.sin(x*0.02+i+t*0.5)*30+Math.sin(x*0.01+i*0.7+t)*15;
+      if(x===0)ctx.moveTo(x,y+i*20); else ctx.lineTo(x,y+i*20);
+    }
+    ctx.stroke();
+  }
+  
+  ctx.shadowColor='#c8a2c8'; ctx.shadowBlur=25;
+  ctx.fillStyle='#fff'; ctx.font='bold 44px system-ui'; ctx.textAlign='center';
+  ctx.fillText('Rhythm of Harmony',canvas.width/2,90);
+  ctx.shadowBlur=0;
+  
+  ctx.fillStyle='#c8a2c8'; ctx.font='bold 20px system-ui';
+  ctx.fillText('🎵 Where Music Unites 🎵',canvas.width/2,140);
+  
+  ctx.fillStyle='#aaa'; ctx.font='14px system-ui';
+  ctx.fillText('Tap when notes hit the circle!',canvas.width/2,195);
+  ctx.fillText('Play Tabla 🥁 + Sitar 🪕 + Vocals 🎤',canvas.width/2,218);
+  ctx.fillText('Build Unity Meter for Harmony!',canvas.width/2,241);
+  
+  // Lane preview
+  LANE_TYPES.forEach((lt,i)=>{
+    const lx=canvas.width/2-150+i*150;
+    ctx.fillStyle=lt.color+'44';
+    ctx.fillRect(lx-50,280,100,120);
+    ctx.beginPath(); ctx.arc(lx,HIT_Y+10,NOTE_R,0,Math.PI*2);
+    ctx.strokeStyle=lt.color; ctx.lineWidth=3;
+    ctx.shadowColor=lt.color; ctx.shadowBlur=10;
+    ctx.stroke(); ctx.shadowBlur=0;
+    ctx.font='24px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(lt.symbol,lx,HIT_Y+10);
+    ctx.fillStyle='#aaa'; ctx.font='12px system-ui';
+    ctx.fillText(KEYS[i].toUpperCase(),lx,HIT_Y+55);
+  });
+  
+  const pulse=0.7+Math.sin(performance.now()*0.005)*0.3;
+  ctx.globalAlpha=pulse; ctx.fillStyle='#fff'; ctx.font='bold 18px system-ui';
+  ctx.fillText('TAP OR PRESS ANY KEY TO START',canvas.width/2,440); ctx.globalAlpha=1;
+  
+  ctx.fillStyle='#555'; ctx.font='12px system-ui';
+  ctx.fillText('IndoPak.love — Music transcends borders',canvas.width/2,canvas.height-20);
+}
+
+function drawGameOver(){
+  ctx.fillStyle='rgba(0,0,0,0.82)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#FF4B4B'; ctx.font='bold 44px system-ui'; ctx.textAlign='center';
+  ctx.fillText('Song Over',canvas.width/2,canvas.height/2-70);
+  ctx.fillStyle='#fff'; ctx.font='22px system-ui';
+  ctx.fillText(`Score: ${score}`,canvas.width/2,canvas.height/2-15);
+  ctx.fillStyle='#FECA57'; ctx.font='18px system-ui';
+  ctx.fillText(`Max Combo: ${maxCombo}x`,canvas.width/2,canvas.height/2+20);
+  ctx.fillStyle='#aaa'; ctx.font='14px system-ui';
+  ctx.fillText('The music will play again...',canvas.width/2,canvas.height/2+55);
+  if(score>highScore){highScore=score;localStorage.setItem('rh_hs',highScore);ctx.fillStyle='#4CAF50';ctx.font='bold 18px system-ui';ctx.fillText('🏆 New Best! 🏆',canvas.width/2,canvas.height/2+85);}
+  const p=0.7+Math.sin(performance.now()*0.008)*0.3; ctx.globalAlpha=p; ctx.fillStyle='#fff'; ctx.font='bold 17px system-ui';
+  ctx.fillText('TAP TO PLAY AGAIN',canvas.width/2,canvas.height/2+120); ctx.globalAlpha=1;
+}
+
+// ── Main Loop ─────────────────────────────────────────────
+function loop(ts){
+  frameCount++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  
+  if(state==='loading'){
+    document.getElementById('loading').style.opacity='0';
+    setTimeout(()=>{document.getElementById('loading').style.display='none';},500);
+    state='start'; return;
+  }
+  
+  if(state==='start'){drawStartScreen();requestAnimationFrame(loop);return;}
+  
+  if(state==='playing'){
+    const dt=Math.min(ts-lastTime,50);
+    lastTime=ts;
+    update(dt);
+    draw();
+    if(state==='gameover'){
+      if(score>highScore){highScore=score;localStorage.setItem('rh_hs',highScore);}
+    }
+  }
+  
+  if(state==='gameover')drawGameOver();
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
