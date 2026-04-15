@@ -3,102 +3,373 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>IndoPak.love — Games for Love</title>
+<title>IndoPak Runner — Love Wins</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#0a0a12; color:#fff; font-family:system-ui,sans-serif; min-height:100vh; overflow-x:hidden; }
-.banner { text-align:center; padding:40px 20px 20px; background:linear-gradient(180deg,#1a0a2e 0%,#0a0a12 100%); }
-.banner h1 { font-size:clamp(28px,6vw,52px); font-weight:800; background:linear-gradient(90deg,#2d8f4e,#c8a2c8,#FF8C00); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:8px; }
-.banner p { color:#aaa; font-size:clamp(13px,2.5vw,18px); }
-.banner .tagline { font-size:clamp(16px,3vw,24px); color:#FECA57; margin-top:12px; font-weight:600; }
-.flags { font-size:40px; margin-bottom:8px; }
-.games { max-width:900px; margin:0 auto; padding:20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
-.game-card { background:linear-gradient(135deg,#1a1a2e,#2a1a3e); border-radius:16px; overflow:hidden; cursor:pointer; transition:transform 0.2s,box-shadow 0.2s; border:1px solid #333; }
-.game-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(200,162,200,0.2); border-color:#555; }
-.game-card:active { transform:translateY(-1px); }
-.card-icon { font-size:48px; text-align:center; padding:24px 0 8px; }
-.card-body { padding:12px 16px 20px; }
-.card-title { font-size:18px; font-weight:700; margin-bottom:6px; }
-.card-desc { color:#888; font-size:13px; line-height:1.5; margin-bottom:10px; }
-.card-tag { display:inline-block; background:#222; color:#aaa; font-size:11px; padding:3px 10px; border-radius:20px; }
-.card-play { background:linear-gradient(90deg,#2d8f4e,#FF8C00); color:#fff; font-size:14px; font-weight:700; padding:10px; text-align:center; border-radius:8px; margin-top:12px; }
-.gplay-badge { text-align:center; padding:20px; color:#666; font-size:13px; }
-.gplay-badge span { color:#FECA57; }
-footer { text-align:center; padding:30px; color:#444; font-size:12px; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;display:flex;justify-content:center;align-items:center;min-height:100vh;overflow:hidden;font-family:system-ui,sans-serif}
+#gameCanvas{display:block;border-radius:12px;box-shadow:0 0 60px rgba(255,107,107,0.3);cursor:pointer;touch-action:none}
+#loading{position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0a0a;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#f0f0f0;font-size:18px;z-index:100;transition:opacity .5s}
+#loading .heart{font-size:48px;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
 </style>
 </head>
 <body>
-
-<div class="banner">
-  <div class="flags">🇵🇰 ❤️ 🇮🇳</div>
-  <h1>IndoPak.love</h1>
-  <p>Games that spread love between Pakistan & India</p>
-  <div class="tagline">❤️ Love Wins ❤️</div>
-</div>
-
-<div class="games">
-  <div class="game-card" onclick="play('indo-pak-runner.html')">
-    <div class="card-icon">🏃</div>
-    <div class="card-body">
-      <div class="card-title">IndoPak Runner</div>
-      <div class="card-desc">Run through a transforming world. Collect hearts, dodge hate obstacles. The further you go, the more the world unites!</div>
-      <span class="card-tag">🏃 Endless Runner</span>
-      <div class="card-play">▶ Play Now</div>
-    </div>
-  </div>
-
-  <div class="game-card" onclick="play('games/bridge-builder.html')">
-    <div class="card-icon">🌉</div>
-    <div class="card-body">
-      <div class="card-title">Bridge Builder</div>
-      <div class="card-desc">Match 3+ tiles to build bridges between nations. Mr. Hate places obstacles but love always finds a way.</div>
-      <span class="card-tag">🧩 Puzzle</span>
-      <div class="card-play">▶ Play Now</div>
-    </div>
-  </div>
-
-  <div class="game-card" onclick="play('games/rhythm-of-harmony.html')">
-    <div class="card-icon">🎵</div>
-    <div class="card-body">
-      <div class="card-title">Rhythm of Harmony</div>
-      <div class="card-desc">Tabla meets Sitar! Tap to the beat of Pakistani and Indian music. Build unity through the universal language of sound.</div>
-      <span class="card-tag">🎵 Rhythm Game</span>
-      <div class="card-play">▶ Play Now</div>
-    </div>
-  </div>
-
-  <div class="game-card" onclick="play('games/dosti-diaries.html')">
-    <div class="card-icon">💌</div>
-    <div class="card-body">
-      <div class="card-title">The Dosti Diaries</div>
-      <div class="card-desc">Ahmed 🇵🇰 and Priya 🇮🇳 become pen pals despite their families' prejudice. Your choices determine if love conquers hate.</div>
-      <span class="card-tag">📖 Visual Novel</span>
-      <div class="card-play">▶ Play Now</div>
-    </div>
-  </div>
-
-  <div class="game-card" onclick="play('games/clash-of-hearts.html')">
-    <div class="card-icon">⚔️</div>
-    <div class="card-body">
-      <div class="card-title">Clash of Hearts</div>
-      <div class="card-desc">Turn-based battle where Pakistan vs India... until they realize the true enemy is Division. United they are unstoppable!</div>
-      <span class="card-tag">⚔️ RPG Battle</span>
-      <div class="card-play">▶ Play Now</div>
-    </div>
-  </div>
-</div>
-
-<div class="gplay-badge">
-  📱 Available on <strong>IndoPak Games</strong> app (Android)<br>
-  Coming soon to Google Play Store <span>�arket</span>
-</div>
-
-<footer>
-  IndoPak.love — Building bridges through games 🇵🇰❤️🇮🇳
-</footer>
-
+<div id="loading"><div class="heart">❤️</div><div>Loading IndoPak Runner...</div></div>
+<canvas id="gameCanvas"></canvas>
 <script>
-function play(page){ window.location.href = page; }
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+
+function resize(){
+  const maxW=800,maxH=500,ratio=maxW/maxH;
+  let w=window.innerWidth*.95,h=w/ratio;
+  if(h>window.innerHeight*.9){h=window.innerHeight*.9;w=h*ratio;}
+  canvas.width=maxW;canvas.height=maxH;
+  canvas.style.width=w+'px';canvas.style.height=h+'px';
+}
+resize();window.addEventListener('resize',resize);
+
+// ── Audio ─────────────────────────────────────────────
+let audioCtx=null;
+function initAudio(){if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext);}if(audioCtx.state==='suspended')audioCtx.resume();}
+function tone(f,type='sine',dur=.15,vol=.3,f2=null){
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type;o.frequency.setValueAtTime(f,audioCtx.currentTime);
+  if(f2)o.frequency.exponentialRampToValueAtTime(f2,audioCtx.currentTime+dur);
+  g.gain.setValueAtTime(vol,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);
+  o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);
+}
+const sfxJump=()=>tone(200,'sine',.12,.25,600);
+const sfxCollect=()=>{tone(880,'sine',.08,.2);setTimeout(()=>tone(1100,'sine',.1,.15),60);};
+const sfxHit=()=>tone(100,'sawtooth',.15,.3);
+const sfxMilestone=()=>{[523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,'sine',.15,.2),i*100));};
+
+// ── Constants ─────────────────────────────────────────
+const GY=420,GRAV=0.85,JV=-15,JV2=-12,BASE_S=5,MAX_S=12;
+const UNITY_FACTS=[
+  "Both nations share Sufi music & qawwali traditions ❤️",
+  "Bollywood & Lollywood shaped South Asian identity 🎬",
+  "Both nations gained independence together in 1947 🇮🇳🇵🇰",
+  "Faiz Ahmed Faiz's poetry is loved across the border ✍️",
+  "Pakistani chai + Indian paratha = shared happiness ☕",
+  "Both nations play Kabaddi & cricket with passion 🏏",
+  "Shah Rukh Khan & Atif Aslam — loved in both countries 🎵",
+  "The Taj Mahal & Badshahi Mosque speak of love 🕌",
+];
+
+// ── State ─────────────────────────────────────────────
+let state='loading',score=0,hiScore=parseInt(localStorage.getItem('ip_hs')||'0');
+let unity=0,speed=BASE_S,obs=[],cols=[],parts=[],bgEls=[];
+let lastObs=0,lastCol=0,fc=0,milestoneT=0,milestoneTxt='',milestoneFlash=0;
+
+// ── Hero ───────────────────────────────────────────────
+const hero={x:100,y:GY,w:44,h:52,vy:0,onGround:true,ducking:false,canDouble:true,anim:0,hitT:0};
+
+// ── Helpers ───────────────────────────────────────────
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,mx,mn)=>Math.max(mx,Math.min(mn,v));
+const rand=(a,b)=>Math.random()*(b-a)+a;
+const ri=(a,b)=>Math.floor(rand(a,b+1));
+const lc=(a,b,t)=>{const p=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];[r,g,b]=p(a);[r2,g2,b2]=p(b);return`rgb(${Math.round(r+(r2-r)*t)},${Math.round(g+(g2-g)*t)},${Math.round(b+(b2-b)*t)})`;};
+const drawStar=(cx,cy,sp,or,ir)=>{ctx.beginPath();for(let i=0;i<sp*2;i++){const r=i%2===0?or:ir,a=(i*Math.PI)/sp-Math.PI/2;if(i===0)ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a));else ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}ctx.closePath();ctx.fill();};
+
+// ── Particles ─────────────────────────────────────────
+function spawnP(x,y,color,count=8){
+  for(let i=0;i<count;i++){
+    parts.push({x,y,vx:rand(-4,4),vy:rand(-6,-1),life:1,decay:rand(.02,.05),size:rand(4,10),color,shape:Math.random()>.5?'circle':'star'});
+  }
+}
+function updateParts(){
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.2;p.life-=p.decay;
+    if(p.life<=0)parts.splice(i,1);
+  }
+}
+function drawParts(){
+  parts.forEach(p=>{ctx.globalAlpha=p.life;ctx.fillStyle=p.color;
+    if(p.shape==='circle'){ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}
+    else drawStar(p.x,p.y,5,p.size,p.size*.5);
+  });ctx.globalAlpha=1;
+}
+
+// ── BG Elements ───────────────────────────────────────
+function spawnBg(){
+  bgEls.push({x:canvas.width+50,type:Math.random()>.5?'cloud':'bird',y:rand(40,160),speed:rand(.3,.8),size:rand(20,40),phase:rand(0,Math.PI*2)});
+}
+function updateBg(){
+  if(fc%120===0)spawnBg();
+  for(let i=bgEls.length-1;i>=0;i--){bgEls[i].x-=bgEls[i].speed*speed*.3;bgEls[i].phase+=.03;if(bgEls[i].x<-60)bgEls.splice(i,1);}
+}
+function drawBg(){
+  bgEls.forEach(el=>{
+    ctx.globalAlpha=.4;ctx.fillStyle='#888';
+    if(el.type==='cloud'){ctx.beginPath();ctx.ellipse(el.x,el.y+Math.sin(el.phase)*5,el.size,el.size*.5,0,0,Math.PI*2);ctx.fill();}
+    else{const w2=Math.sin(el.phase*3)*8;ctx.beginPath();ctx.moveTo(el.x-el.size,el.y+w2);ctx.lineTo(el.x,el.y);ctx.lineTo(el.x+el.size,el.y+w2);ctx.lineWidth=2;ctx.strokeStyle='#888';ctx.stroke();}
+    ctx.globalAlpha=1;
+  });
+}
+
+// ── Landmarks ──────────────────────────────────────────
+function drawLandmarks(){
+  const pkX=60,inX=canvas.width-90;
+  ctx.globalAlpha=lerp(.15,.5,unity);
+  // Minar
+  ctx.fillStyle=lc('#555','#2d8f4e',unity);
+  ctx.beginPath();ctx.moveTo(pkX,GY);ctx.lineTo(pkX-20,GY-120);ctx.lineTo(pkX-8,GY-120);ctx.lineTo(pkX-5,GY-80);ctx.lineTo(pkX-15,GY-80);ctx.lineTo(pkX-3,GY-40);ctx.lineTo(pkX+12,GY-40);ctx.lineTo(pkX+4,GY-80);ctx.lineTo(pkX+14,GY-80);ctx.lineTo(pkX+18,GY-120);ctx.lineTo(pkX+28,GY-120);ctx.closePath();ctx.fill();
+  // Taj
+  ctx.fillStyle=lc('#666','#e8c97a',unity);
+  ctx.beginPath();ctx.ellipse(inX+30,GY-100,28,35,0,Math.PI,0);ctx.fill();
+  ctx.fillRect(inX-5,GY-65,70,30);
+  ctx.beginPath();ctx.ellipse(inX+5,GY-70,14,18,0,Math.PI,0);ctx.ellipse(inX+55,GY-70,14,18,0,Math.PI,0);ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+// ── Ground ─────────────────────────────────────────────
+function drawGround(){
+  const mid=canvas.width/2;
+  const gl=ctx.createLinearGradient(0,GY,0,canvas.height);
+  gl.addColorStop(0,lc('#6B5344','#5a8f4e',unity));gl.addColorStop(1,'#222');
+  ctx.fillStyle=gl;ctx.fillRect(0,GY,mid,canvas.height-GY);
+  const gr=ctx.createLinearGradient(0,GY,0,canvas.height);
+  gr.addColorStop(0,lc('#7a5530','#c9923a',unity));gr.addColorStop(1,'#222');
+  ctx.fillStyle=gr;ctx.fillRect(mid,GY,mid,canvas.height-GY);
+  const glow=lc('#333','#a5d6a7',unity);
+  ctx.strokeStyle=glow;ctx.lineWidth=lerp(1,4,unity);
+  ctx.shadowColor=glow;ctx.shadowBlur=lerp(0,15,unity);
+  ctx.beginPath();ctx.moveTo(mid,GY);ctx.lineTo(mid,canvas.height);ctx.stroke();
+  ctx.shadowBlur=0;
+}
+
+// ── Hero Draw ──────────────────────────────────────────
+function drawHero(){
+  const bounce=hero.onGround?Math.sin(fc*.15)*3:0;
+  const cy=hero.y-hero.h+bounce;
+  const pulse=Math.sin(fc*.1)*3;
+  if(hero.hitT>0&&Math.floor(fc/4)%2===0)ctx.globalAlpha=.4;
+  ctx.fillStyle='rgba(0,0,0,.3)';
+  ctx.beginPath();ctx.ellipse(hero.x+hero.w/2,GY+2,hero.w/2+4,6,0,0,Math.PI*2);ctx.fill();
+  ctx.save();
+  ctx.beginPath();ctx.rect(hero.x,cy,hero.w/2,hero.h);ctx.fillStyle='#2d8f4e';ctx.fill();
+  ctx.beginPath();ctx.rect(hero.x+hero.w/2,cy,hero.w/2,hero.h);ctx.fillStyle='#FF8C00';ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(hero.x+hero.w/2,cy+hero.h/2,Math.min(hero.w,hero.h)/2+pulse,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#FF4B4B';ctx.font=`${20+pulse}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('❤',hero.x+hero.w/2,cy+hero.h/2);
+  if(!hero.ducking){
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(hero.x+hero.w/2-8,cy+hero.h/3,4,0,Math.PI*2);ctx.arc(hero.x+hero.w/2+8,cy+hero.h/3,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#111';ctx.beginPath();ctx.arc(hero.x+hero.w/2-8,cy+hero.h/3,2,0,Math.PI*2);ctx.arc(hero.x+hero.w/2+8,cy+hero.h/3,2,0,Math.PI*2);ctx.fill();
+  }
+  if(hero.onGround&&!hero.ducking){
+    const ls=Math.sin(hero.anim*.4)*10;
+    ctx.strokeStyle='#2d8f4e';ctx.lineWidth=4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(hero.x+hero.w/2-6,cy+hero.h);ctx.lineTo(hero.x+hero.w/2-6+ls,cy+hero.h+12);ctx.stroke();
+    ctx.strokeStyle='#FF8C00';
+    ctx.beginPath();ctx.moveTo(hero.x+hero.w/2+6,cy+hero.h);ctx.lineTo(hero.x+hero.w/2+6-ls,cy+hero.h+12);ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+}
+
+// ── Obstacles ─────────────────────────────────────────
+const OBS=[
+  {w:36,h:52,color:'#2D2D2D',shape:'block'},
+  {w:30,h:46,color:'#1a1a1a',shape:'triangle'},
+  {w:70,h:36,color:'#444',shape:'cloud'},
+];
+function drawObs(o){
+  const t=OBS[o.type];
+  ctx.shadowColor='#000';ctx.shadowBlur=8;ctx.fillStyle=t.color;
+  if(t.shape==='block'){
+    ctx.fillRect(o.x,o.y,o.w,o.h);ctx.fillStyle='#1a1a1a';
+    ctx.strokeStyle='#FF4B4B';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(o.x+4,o.y+4);ctx.lineTo(o.x+o.w-4,o.y+o.h-4);ctx.moveTo(o.x+o.w-4,o.y+4);ctx.lineTo(o.x+4,o.y+o.h-4);ctx.stroke();
+    ctx.fillStyle='#FF4B4B';ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.fillText('HATE',o.x+o.w/2,o.y+o.h/2+3);
+  } else if(t.shape==='triangle'){
+    ctx.beginPath();ctx.moveTo(o.x+o.w/2,o.y);ctx.lineTo(o.x+o.w,o.y+o.h);ctx.lineTo(o.x,o.y+o.h);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#8B0000';ctx.beginPath();ctx.moveTo(o.x+o.w/2,o.y+8);ctx.lineTo(o.x+o.w/2+6,o.y+o.h-4);ctx.lineTo(o.x+o.w/2-6,o.y+o.h-4);ctx.closePath();ctx.fill();
+  } else {
+    ctx.globalAlpha=.85;ctx.beginPath();ctx.ellipse(o.x+o.w/2,o.y+o.h/2,o.w/2,o.h/2,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle='#FF6B6B';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText('RUMOR',o.x+o.w/2,o.y+o.h/2+3);
+  }
+  ctx.shadowBlur=0;
+}
+
+// ── Collectibles ───────────────────────────────────────
+const COLS=[{w:28,h:28,pts:10,color:'#FF4B4B',sym:'❤️',type:'heart'},{w:30,h:30,pts:25,color:'#FECA57',type:'star'},{w:34,h:24,pts:5,color:'#c8a2c8',sym:'🎸',type:'sitar'}];
+function drawCol(c){
+  const pulse=Math.sin(fc*.15+c.x)*3;
+  const bob=c.y+pulse;
+  ctx.shadowColor=c.color;ctx.shadowBlur=12;
+  if(c.type==='heart'){ctx.fillStyle=c.color;ctx.font=`${c.w+pulse}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(c.sym,c.x,bob);}
+  else if(c.type==='star'){ctx.fillStyle=c.color;drawStar(c.x,bob,5,c.w,c.w*.4);}
+  else{ctx.fillStyle=c.color;ctx.font=`${c.w}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(c.sym,c.x,bob);}
+  ctx.shadowBlur=0;
+}
+
+// ── HUD ────────────────────────────────────────────────
+function drawHUD(){
+  ctx.fillStyle='#fff';ctx.font='bold 24px system-ui';ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillText('Score: '+score,20,18);
+  ctx.fillStyle='#aaa';ctx.font='14px system-ui';ctx.fillText('Best: '+hiScore,20,46);
+  const mw=140,mh=18,mx=canvas.width-mw-20,my=18;
+  ctx.fillStyle='#333';ctx.fillRect(mx,my,mw,mh);
+  const fill=(lerp(0,mw-4,unity));
+  ctx.fillStyle=lc('#8B0000','#4CAF50',unity);ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=8;
+  ctx.fillRect(mx+2,my+2,fill,mh-4);ctx.shadowBlur=0;
+  ctx.strokeStyle='#666';ctx.lineWidth=1;ctx.strokeRect(mx,my,mw,mh);
+  ctx.fillStyle='#fff';ctx.font='11px system-ui';ctx.textAlign='right';ctx.fillText('❤ Unity',mx-6,my+13);
+  if(milestoneT>0){
+    const a=Math.min(1,milestoneT/30);
+    ctx.globalAlpha=a;ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(canvas.width/2-220,canvas.height/2-40,440,70);
+    ctx.fillStyle='#FECA57';ctx.font='bold 16px system-ui';ctx.textAlign='center';
+    ctx.fillText('✨ '+milestoneTxt,canvas.width/2,canvas.height/2-5);
+    ctx.fillStyle='#aaa';ctx.font='12px system-ui';
+    ctx.fillText('Love overcomes division!',canvas.width/2,canvas.height/2+20);
+    ctx.globalAlpha=1;
+  }
+}
+
+// ── Start Screen ───────────────────────────────────────
+function drawStart(){
+  const skyG=ctx.createLinearGradient(0,0,0,GY);
+  skyG.addColorStop(0,'#2d2d3a');skyG.addColorStop(1,'#FF6B6B');
+  ctx.fillStyle=skyG;ctx.fillRect(0,0,canvas.width,GY);
+  drawLandmarks();drawGround();
+  ctx.shadowColor='#FF4B4B';ctx.shadowBlur=20;
+  ctx.fillStyle='#fff';ctx.font='bold 52px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('IndoPak Runner',canvas.width/2,canvas.height/2-90);ctx.shadowBlur=0;
+  ctx.fillStyle='#FECA57';ctx.font='bold 22px system-ui';
+  ctx.fillText('❤ Love Wins ❤',canvas.width/2,canvas.height/2-40);
+  const py=canvas.height/2+20+Math.sin(fc*.08)*8;
+  ctx.save();
+  ctx.beginPath();ctx.rect(canvas.width/2-22,py,22,52);ctx.fillStyle='#2d8f4e';ctx.fill();
+  ctx.beginPath();ctx.rect(canvas.width/2,py,22,52);ctx.fillStyle='#FF8C00';ctx.fill();
+  ctx.restore();
+  ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText('❤',canvas.width/2,py+26);
+  const a=.6+Math.sin(fc*.08)*.4;ctx.globalAlpha=a;
+  ctx.fillStyle='#fff';ctx.font='bold 18px system-ui';
+  ctx.fillText('TAP OR PRESS SPACE TO START',canvas.width/2,canvas.height/2+110);ctx.globalAlpha=1;
+  ctx.fillStyle='#888';ctx.font='13px system-ui';
+  ctx.fillText('IndoPak.love — Building bridges through games',canvas.width/2,canvas.height-25);
+}
+
+// ── Game Over ─────────────────────────────────────────
+function drawOver(){
+  ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#FF6B6B';ctx.font='bold 46px system-ui';ctx.textAlign='center';
+  ctx.fillText('Game Over',canvas.width/2,canvas.height/2-70);
+  ctx.fillStyle='#fff';ctx.font='bold 28px system-ui';
+  ctx.fillText('Score: '+score,canvas.width/2,canvas.height/2-10);
+  if(score>=hiScore&&score>0){ctx.fillStyle='#FECA57';ctx.font='bold 20px system-ui';ctx.fillText('🏆 New Best! 🏆',canvas.width/2,canvas.height/2+30);}
+  else{ctx.fillStyle='#aaa';ctx.font='18px system-ui';ctx.fillText('Best: '+hiScore,canvas.width/2,canvas.height/2+30);}
+  ctx.fillStyle='#aaa';ctx.font='14px system-ui';ctx.fillText('Love is stronger than hate. Play again!',canvas.width/2,canvas.height/2+65);
+  const a=.7+Math.sin(fc*.1)*.3;ctx.globalAlpha=a;ctx.fillStyle='#fff';ctx.font='bold 18px system-ui';
+  ctx.fillText('TAP OR PRESS SPACE TO RETRY',canvas.width/2,canvas.height/2+100);ctx.globalAlpha=1;
+}
+
+// ── Spawn ──────────────────────────────────────────────
+function spawnObs(){
+  const type=ri(0,2);
+  const t=OBS[type];
+  obs.push({x:canvas.width+20,y:type===2?GY-70-rand(0,40):GY-t.h,w:t.w,h:t.h,type});
+}
+function spawnCol(){
+  const c=COLS[ri(0,2)];
+  cols.push({x:canvas.width+20,y:GY-80-rand(0,60),...c});
+}
+
+// ── Collision ─────────────────────────────────────────
+function hb(){
+  const dh=hero.ducking?hero.h*.5:hero.h;
+  return{x:hero.x+6,y:hero.y-dh+6,w:hero.w-12,h:dh-6};
+}
+function coll(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+
+// ── Game Logic ─────────────────────────────────────────
+function doJump(){
+  initAudio();
+  if(state==='start'){startGame();return;}
+  if(state==='gameover'){startGame();return;}
+  if(state!=='playing')return;
+  if(hero.onGround){hero.vy=JV;hero.y+=hero.vy;hero.onGround=false;sfxJump();}
+  else if(hero.canDouble){hero.vy=JV2;hero.canDouble=false;sfxJump();}
+}
+function doDuck(){if(state!=='playing'||!hero.onGround)return;hero.ducking=true;}
+function releaseDuck(){hero.ducking=false;}
+function startGame(){
+  score=0;unity=0;speed=BASE_S;obs=[];cols=[];parts=[];bgEls=[];hero.y=GY;hero.vy=0;
+  hero.onGround=true;hero.ducking=false;hero.canDouble=true;hero.hitT=0;lastObs=Date.now();lastCol=Date.now();
+  milestoneT=0;state='playing';
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();doJump();}
+  if(e.code==='ArrowDown'){e.preventDefault();doDuck();}
+  if(e.code==='Enter'&&(state==='start'||state==='gameover'))startGame();
+});
+document.addEventListener('keyup',e=>{if(e.code==='ArrowDown')releaseDuck();});
+canvas.addEventListener('pointerdown',e=>{
+  initAudio();
+  const rect=canvas.getBoundingClientRect();
+  const ry=(e.clientY-rect.top)/rect.height;
+  if(state==='start'||state==='gameover'){startGame();return;}
+  if(ry<.55)doJump();else doDuck();
+});
+canvas.addEventListener('pointerup',releaseDuck);
+
+// ── Main Loop ──────────────────────────────────────────
+function loop(){
+  fc++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(state==='loading'){
+    document.getElementById('loading').style.opacity='0';
+    setTimeout(()=>{document.getElementById('loading').style.display='none';},500);
+    state='start';return;
+  }
+  if(state==='start'){drawStart();requestAnimationFrame(loop);return;}
+  // Playing / gameover
+  const skyG=ctx.createLinearGradient(0,0,0,GY);
+  skyG.addColorStop(0,lc('#2d2d3a','#1a1a2e',unity));skyG.addColorStop(1,lc('#5a5a6a','#FF6B6B',unity));
+  ctx.fillStyle=skyG;ctx.fillRect(0,0,canvas.width,GY);
+  if(milestoneFlash>0){ctx.fillStyle=`rgba(254,202,87,${milestoneFlash/40})`;ctx.fillRect(0,0,canvas.width,canvas.height);milestoneFlash--;}
+  drawLandmarks();drawBg();drawGround();
+  updateBg();
+  if(state==='playing'){
+    hero.anim++;
+    if(!hero.onGround){hero.vy+=GRAV;hero.y+=hero.vy;if(hero.y>=GY){hero.y=GY;hero.vy=0;hero.onGround=true;hero.canDouble=true;}}
+    if(hero.hitT>0)hero.hitT--;
+    const now=Date.now();
+    const gap=lerp(2200,1100,unity);
+    if(now-lastObs>gap+rand(-400,400)){spawnObs();lastObs=now;}
+    if(now-lastCol>1200+rand(-300,600)){spawnCol();lastCol=now;}
+    for(let i=obs.length-1;i>=0;i--){obs[i].x-=speed;if(obs[i].x+obs[i].w<0)obs.splice(i,1);}
+    const hhb=hb();
+    for(const o of obs){if(coll(hhb,o)&&hero.hitT===0){sfxHit();hero.hitT=90;state='gameover';if(score>hiScore){hiScore=score;localStorage.setItem('ip_hs',hiScore);}break;}}
+    for(let i=cols.length-1;i>=0;i--){
+      cols[i].x-=speed;
+      const cb={x:cols[i].x-cols[i].w/2,y:cols[i].y-cols[i].h/2,w:cols[i].w,h:cols[i].h};
+      if(coll(hhb,cb)){score+=cols[i].pts;spawnP(cols[i].x,cols[i].y,cols[i].color,10);sfxCollect();cols.splice(i,1);}
+      else if(cols[i].x+cols[i].w<0)cols.splice(i,1);
+    }
+    score++;unity=clamp(score/1500,0,1);speed=lerp(BASE_S,MAX_S,clamp(score/800,0,1));
+    if(score%500===0&&score>0){milestoneTxt=UNITY_FACTS[ri(0,UNITY_FACTS.length-1)];milestoneT=150;milestoneFlash=20;sfxMilestone();}
+    if(milestoneT>0)milestoneT--;
+  }
+  updateParts();
+  obs.forEach(drawObs);
+  cols.forEach(drawCol);
+  drawHero();
+  drawParts();
+  drawHUD();
+  if(state==='gameover')drawOver();
+  requestAnimationFrame(loop);
+}
+
+// Init bg elements
+for(let i=0;i<5;i++){bgEls.push({x:rand(0,canvas.width),type:Math.random()>.5?'cloud':'bird',y:rand(40,160),speed:rand(.3,.8),size:rand(20,40),phase:rand(0,Math.PI*2)});}
+loop();
 </script>
 </body>
 </html>
